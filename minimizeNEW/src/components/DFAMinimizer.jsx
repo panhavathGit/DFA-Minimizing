@@ -8,12 +8,12 @@ const minimizeDFA = (dfa) => {
   const { states, alphabet, transitions, startState, finalStates } = dfa;
 
   // Step 1: Partition states into final and non-final states
-  let P = [new Set(finalStates), new Set(states.filter(s =>!finalStates.includes(s)))];
+  let P = [new Set(finalStates), new Set(states.filter(s => !finalStates.includes(s)))];
   let W = [new Set(finalStates)];
 
   // Helper function to check if two sets are equal
   const setsEqual = (a, b) => a.size === b.size && [...a].every(value => b.has(value));
-  
+
   // Step 2: Refinement process
   while (W.length > 0) {
     const A = W.pop();
@@ -27,14 +27,14 @@ const minimizeDFA = (dfa) => {
 
       for (let Y of P.slice()) {
         const intersection = new Set([...Y].filter(x => X.has(x)));
-        const difference = new Set([...Y].filter(x =>!X.has(x)));
+        const difference = new Set([...Y].filter(x => !X.has(x)));
 
         if (intersection.size > 0 && difference.size > 0) {
-          P = P.filter(s =>!setsEqual(s, Y));
+          P = P.filter(s => !setsEqual(s, Y));
           P.push(intersection, difference);
 
           if (W.some(set => setsEqual(set, Y))) {
-            W = W.filter(set =>!setsEqual(set, Y));
+            W = W.filter(set => !setsEqual(set, Y));
             W.push(intersection, difference);
           } else {
             if (intersection.size <= difference.size) {
@@ -49,28 +49,38 @@ const minimizeDFA = (dfa) => {
   }
 
   // Step 3: Build new DFA from the partitioned sets
-  // const stateMap = new Map();
-  // P.forEach((set, i) => set.forEach(s => stateMap.set(s, `q${i}`)));
-
-  // const newStates = P.map((_, i) => `q${i}`);
-  // // const newStartState = stateMap.get(startState);
-  // const newStartState = `q${Array.from(stateMap.values()).indexOf(stateMap.get(startState))}`;
-
-  // Collect new final states ensuring no duplicates
-  let newFinalStates = [...new Set(P.flatMap((set, i) => set.has(startState)? [i] : []))];
-  newFinalStates = newFinalStates.map(i => `q${i}`);
-////test
   const stateMap = new Map();
   P.forEach((set, i) => set.forEach(s => stateMap.set(s, `q${i}`)));
 
   const newStates = P.map((_, i) => `q${i}`);
 
-  // Find the index of the partition containing the original start state
-  const startStateIndex = Array.from(stateMap.values()).indexOf(stateMap.get(startState));
+  // Ensure q0 is the start state
+  const startStatePartition = P.findIndex(set => set.has(startState));
+  const newStartState = `q0`;
 
-  // Use the index to construct the new start state name
-  const newStartState = `q${startStateIndex}`;
-///////test end 
+  // Remap states so that q0 is the start state
+  const remappedStates = newStates.map((state, index) => {
+    if (index === startStatePartition) return `q0`;
+    return `q${index < startStatePartition ? index + 1 : index}`;
+  });
+
+  const remappedStateMap = new Map();
+  remappedStates.forEach((state, index) => {
+    stateMap.forEach((mappedState, originalState) => {
+      if (mappedState === `q${index}`) {
+        remappedStateMap.set(originalState, state);
+      }
+    });
+  });
+
+  // Collect new final states ensuring no duplicates
+  const newFinalStates = P.reduce((acc, set, i) => {
+    if ([...set].some(s => finalStates.includes(s))) {
+      acc.push(remappedStates[i]);
+    }
+    return acc;
+  }, []);
+
   const newTransitionsSet = new Set();
 
   P.forEach((set, i) => {
@@ -78,8 +88,8 @@ const minimizeDFA = (dfa) => {
       alphabet.forEach(symbol => {
         const transition = transitions.find(t => t.from === s && t.symbol === symbol);
         if (transition) {
-          const newFrom = stateMap.get(s);
-          const newTo = stateMap.get(transition.to);
+          const newFrom = remappedStateMap.get(s);
+          const newTo = remappedStateMap.get(transition.to);
           if (newFrom && newTo) {
             newTransitionsSet.add(`${newFrom},${symbol},${newTo}`);
           }
@@ -94,7 +104,7 @@ const minimizeDFA = (dfa) => {
   });
 
   return {
-    states: newStates,
+    states: remappedStates,
     alphabet,
     transitions: newTransitions,
     startState: newStartState,
@@ -118,3 +128,5 @@ const DFAMinimizer = ({ dfa }) => {
 };
 
 export default DFAMinimizer;
+
+

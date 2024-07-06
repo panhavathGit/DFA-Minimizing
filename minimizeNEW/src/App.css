@@ -12,10 +12,6 @@
   width: 40%;
   box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.1);
 }
-/* .info{
-  margin-bottom: 30px;
-} */
-
 
 .ch-container {
   background-color: white;
@@ -28,13 +24,7 @@
   transition: 0.5s all;
   box-shadow: 2px 0px 5px 5px black;
 }
-/* body {
-  font-family:fantasy;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-} */
+
 .title{
   color: white;
   width: 100%;
